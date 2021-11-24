@@ -232,7 +232,7 @@ const port = 0;
         await apolloFetch({ query: '{hello}' });
       });
 
-      it('accepts custom route configuration', async () => {
+      it('accepts custom route CORS configuration', async () => {
         server = new ApolloServer({
           typeDefs,
           resolvers,
@@ -269,6 +269,39 @@ const port = 0;
             ).toEqual(
               'Accept,Authorization,Content-Type,If-None-Match,Another-One,X-Apollo',
             );
+            next();
+          },
+        );
+
+        await apolloFetch({ query: '{hello}' });
+      });
+
+      it('accepts custom route payload configuration', async () => {
+        server = new ApolloServer({
+          typeDefs,
+          resolvers,
+        });
+        app = new Server({
+          port,
+        });
+
+        await server.applyMiddleware({
+          app,
+          route: {
+            payload: {
+              maxBytes: 8192
+            },
+          },
+        });
+
+        await app.start();
+
+        httpServer = app.listener;
+        const uri = app.info.uri + '/graphql';
+
+        const apolloFetch = createApolloFetch({ uri }).useAfter(
+          (response, next) => {
+            expect(response.response.status).toEqual(200);
             next();
           },
         );
